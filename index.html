@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+
+  <link rel="stylesheet" href="estilo.min.css">
+  <title></title>
+
+</head>
+
+<body>
+
+  <div class="dropZone">
+    <div class="card">
+      <div class="imagen"></div>
+      <span>Subir imagen</span>
+      <input type="file" id="file" class="fileImage">
+    </div>
+
+  </div>
+
+
+  <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/4.13.0/firebase.js"></script>
+
+  <script type="text/javascript">
+    var config = {
+      apiKey: "AIzaSyA-kKxNgIANFXh55KttiHfRVzhojKixBhI",
+      authDomain: "reportapp-649e1.firebaseapp.com",
+      databaseURL: "https://reportapp-649e1.firebaseio.com",
+      projectId: "reportapp-649e1",
+      storageBucket: "reportapp-649e1.appspot.com",
+      messagingSenderId: "960497270778"
+    };
+    firebase.initializeApp(config);
+    var listaImagenes=[];
+    $('#file').change(function(e) {
+      var file = e.target.files[0],
+      imageType = /image.*/;
+
+      if (!file.type.match(imageType))
+      return;
+      var tiempo="tiempo"+Math.floor(Date.now() / 1000).toString();
+      var plantilla=`<div class="preview opaco `+tiempo+`" data-porcentaje="0%">
+        <div class="imagen"></div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </div>`;
+
+
+      var reader = new FileReader();
+      reader.onload = fileOnload;
+      reader.readAsDataURL(file);
+
+      function fileOnload(e) {
+        var $preview= $(plantilla);
+        $preview.find('.imagen').css('background-image',"url('"+e.target.result+"')");
+        $('.dropZone').append($preview);
+        $('#file').val('');
+      }
+      var storageRef = firebase.storage().ref();
+      var metadata = { contentType: 'image/jpeg'};
+      var uploadTask = storageRef.child('images/' + file.name).put(file, metadata);
+      uploadTask.on('state_changed', function(snapshot){
+        var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        var porcentaje= parseFloat(progress).toFixed(0) + '%';
+        $('.dropZone .preview.'+tiempo).data('porcentaje',porcentaje);
+        $('.dropZone .preview.'+tiempo).attr('data-porcentaje',porcentaje);
+      },function(error) {
+      console.error(error);
+      }, function() {
+        uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
+          $('.dropZone .preview.'+tiempo).data('ruta',downloadURL)
+          $('.dropZone .preview.'+tiempo).removeClass('opaco');
+          listaImagenes.push(downloadURL);
+        });
+      });
+    });
+
+    $(document).on('click','.dropZone .preview',function(e){
+        var ruta=$(this).data('ruta');
+        var  index=listaImagenes.indexOf(ruta);
+        if (index > -1) {
+            listaImagenes.splice(index, 1);
+        }
+      $(this).remove();
+    });
+  </script>
+</body>
+</html>
